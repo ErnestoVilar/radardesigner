@@ -3,9 +3,524 @@
 <head>
   <meta charset="UTF-8" />
   <title>Radar de Competências – Editor & Resposta</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    h1 {
+      margin-top: 0;
+      font-size: 1.8rem;
+    }
+    .subtitle {
+      color: #6b7280;
+      margin-top: 4px;
+      margin-bottom: 16px;
+    }
+    .panel {
+      background: #ffffff;
+      border-radius: 10px;
+      padding: 14px 16px;
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+      margin-bottom: 16px;
+    }
+    .panel h2 {
+      margin-top: 0;
+      font-size: 1.1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    label {
+      font-size: 0.85rem;
+      display: block;
+      margin-bottom: 4px;
+      color: #4b5563;
+    }
+    input[type="number"],
+    input[type="text"],
+    textarea {
+      width: 100%;
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+      font-size: 0.85rem;
+      background: #f9fafb;
+      outline: none;
+    }
+    input:focus, textarea:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 1px rgba(99,102,241,0.2);
+      background: #ffffff;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      margin-top: 8px;
+    }
+    th, td {
+      padding: 4px 6px;
+      text-align: left;
+    }
+    th {
+      border-bottom: 1px solid #e5e7eb;
+      color: #6b7280;
+    }
+    tr:nth-child(even) td {
+      background: #f9fafb;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border: none;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s, transform 0.05s, box-shadow 0.15s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg,#6366f1,#4f46e5);
+      color: #fff;
+      box-shadow: 0 4px 10px rgba(79,70,229,0.35);
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg,#4f46e5,#4338ca);
+    }
+    .btn-ghost {
+      background: transparent;
+      color: #ef4444;
+    }
+    .btn-ghost:hover {
+      background: rgba(239,68,68,0.07);
+    }
+    .small {
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
+    .totals {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #312e81;
+      font-size: 0.85rem;
+      margin-bottom: 10px;
+    }
+    .slider-row {
+      margin-bottom: 10px;
+    }
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      margin-bottom: 2px;
+      gap: 6px;
+    }
+    input[type="range"] {
+      width: 100%;
+    }
+    .chart-wrapper {
+      margin-top: 12px;
+      min-height: 320px;
+    }
+    #editorView { display: none; }
+    #respondentView { display: none; }
+    @media (max-width: 768px) {
+      h1 { font-size: 1.4rem; }
+    }
+  </style>
 </head>
 <body>
+  <div class="container">
     <h1>Radar de Competências</h1>
     <p class="subtitle" id="modeSubtitle"></p>
+
+    <!-- MODO EDITOR -->
+    <div id="editorView">
+      <div class="panel">
+        <h2>
+          Editor de questionário
+          <span class="small">Apenas para configuração</span>
+        </h2>
+
+        <div style="margin-bottom: 10px;">
+          <label for="totalPointsEditor">Total máximo de pontos a distribuir</label>
+          <input type="number" id="totalPointsEditor" min="1" value="20" />
+          <p class="small">
+            Ex.: 20 pontos que o respondente poderá distribuir entre as categorias.
+          </p>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+          <span class="small">
+            Defina as categorias e os respectivos pesos. O respondente só verá os nomes e poderá atribuir valores.
+          </span>
+          <button class="btn btn-primary" type="button" id="addCategoryBtn">
+            + Adicionar categoria
+          </button>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Nome da categoria</th>
+              <th style="width:80px;">Peso</th>
+              <th style="width:40px;"></th>
+            </tr>
+          </thead>
+          <tbody id="categoryEditorBody"></tbody>
+        </table>
+      </div>
+
+      <div class="panel">
+        <h2>Partilha com respondentes</h2>
+        <p class="small" style="margin-bottom:8px;">
+          Clique em <strong>“Gerar link para respostas”</strong> e envie o link gerado.
+          Quem o abrir verá apenas a interface de resposta, sem acesso ao editor.
+        </p>
+        <button class="btn btn-primary" type="button" id="generateLinkBtn">
+          Gerar link para respostas
+        </button>
+        <div style="margin-top:10px;">
+          <label for="shareLink">Link gerado</label>
+          <textarea id="shareLink" rows="2" readonly placeholder="O link aparecerá aqui…"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODO RESPONDENTE -->
+    <div id="respondentView">
+      <div class="panel">
+        <h2>Questionário</h2>
+        <p class="small" id="respondentIntro">
+          Distribua os pontos pelas categorias de acordo com o seu perfil.
+        </p>
+
+        <div class="totals">
+          <span>Usados: <strong id="totalUsed">0</strong></span>
+          <span>/ Total: <strong id="totalAvailable">0</strong></span>
+          <span>Restam: <strong id="totalRemaining">0</strong></span>
+        </div>
+
+        <div id="slidersContainer"></div>
+
+        <div class="chart-wrapper">
+          <canvas id="radarChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div id="errorView" class="panel" style="display:none;">
+      <h2>Ocorreu um problema</h2>
+      <p>
+        Não foi possível carregar a configuração do questionário. Verifique se o link está completo
+        ou contacte quem lhe enviou o endereço.
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // ---------- UTILITÁRIOS DE CONFIG (Base64 simples) ----------
+    function encodeConfig(config) {
+      const json = JSON.stringify(config);
+      return btoa(json); // Base64
+    }
+
+    function decodeConfig(encoded) {
+      const json = atob(encoded);
+      return JSON.parse(json);
+    }
+
+    // ---------- ESTADO EM MEMÓRIA ----------
+    let editorCategories = [];
+    let totalPointsEditor = 20;
+
+    let respondentCategories = [];
+    let totalPointsRespondent = 0;
+    let radarChart = null;
+
+    // ---------- MODO EDITOR ----------
+    function initEditorMode() {
+      document.getElementById("modeSubtitle").textContent =
+        "Modo editor – configure as categorias que depois serão respondidas por outras pessoas.";
+      document.getElementById("editorView").style.display = "block";
+
+      // categorias de exemplo
+      editorCategories = [
+        { name: "Técnico", weight: 1 },
+        { name: "Experiência de Utilizador", weight: 1 },
+        { name: "Psicologia do Utilizador", weight: 1 },
+        { name: "Dados", weight: 1 },
+        { name: "Gestão de Projetos", weight: 1 },
+        { name: "Criatividade", weight: 1 }
+      ];
+      totalPointsEditor = 20;
+      document.getElementById("totalPointsEditor").value = totalPointsEditor;
+
+      renderEditorTable();
+
+      document.getElementById("addCategoryBtn").addEventListener("click", () => {
+        editorCategories.push({ name: "Nova categoria", weight: 1 });
+        renderEditorTable();
+      });
+
+      document.getElementById("totalPointsEditor").addEventListener("change", (e) => {
+        let v = parseInt(e.target.value, 10);
+        if (isNaN(v) || v < 1) v = 1;
+        totalPointsEditor = v;
+        e.target.value = v;
+      });
+
+      document.getElementById("generateLinkBtn").addEventListener("click", () => {
+        const config = {
+          totalPoints: totalPointsEditor,
+          categories: editorCategories
+        };
+        const encoded = encodeConfig(config);
+
+        // Base da URL atual sem parâmetros
+        const baseUrl = window.location.href.split("?")[0];
+        const link = baseUrl + "?config=" + encodeURIComponent(encoded);
+
+        const ta = document.getElementById("shareLink");
+        ta.value = link;
+        ta.focus();
+        ta.select();
+      });
+    }
+
+    function renderEditorTable() {
+      const tbody = document.getElementById("categoryEditorBody");
+      tbody.innerHTML = "";
+
+      editorCategories.forEach((cat, index) => {
+        const tr = document.createElement("tr");
+
+        // nome
+        const tdName = document.createElement("td");
+        const nameInput = document.createElement("input");
+        nameInput.type = "text";
+        nameInput.value = cat.name;
+        nameInput.addEventListener("input", (e) => {
+          editorCategories[index].name = e.target.value;
+        });
+        tdName.appendChild(nameInput);
+        tr.appendChild(tdName);
+
+        // peso
+        const tdWeight = document.createElement("td");
+        const weightInput = document.createElement("input");
+        weightInput.type = "number";
+        weightInput.step = "0.1";
+        weightInput.min = "0";
+        weightInput.value = cat.weight;
+        weightInput.addEventListener("input", (e) => {
+          let v = parseFloat(e.target.value.replace(",", "."));
+          if (isNaN(v) || v < 0) v = 0;
+          editorCategories[index].weight = v;
+          weightInput.value = v;
+        });
+        tdWeight.appendChild(weightInput);
+        tr.appendChild(tdWeight);
+
+        // remover
+        const tdRemove = document.createElement("td");
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = "×";
+        btn.className = "btn btn-ghost";
+        btn.title = "Remover categoria";
+        btn.addEventListener("click", () => {
+          editorCategories.splice(index, 1);
+          renderEditorTable();
+        });
+        tdRemove.appendChild(btn);
+        tr.appendChild(tdRemove);
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    // ---------- MODO RESPONDENTE ----------
+    function initRespondentMode(configEncoded) {
+      let config;
+      try {
+        config = decodeConfig(configEncoded);
+      } catch (e) {
+        console.error(e);
+        showError();
+        return;
+      }
+      if (!config || !Array.isArray(config.categories) || !config.totalPoints) {
+        showError();
+        return;
+      }
+
+      document.getElementById("modeSubtitle").textContent =
+        "Modo resposta – distribua os pontos pelas categorias para gerar o seu radar.";
+      document.getElementById("respondentView").style.display = "block";
+
+      totalPointsRespondent = config.totalPoints;
+      respondentCategories = config.categories.map((c) => ({
+        name: c.name || "Categoria",
+        weight: (typeof c.weight === "number" ? c.weight : 1),
+        value: 0
+      }));
+
+      document.getElementById("totalAvailable").textContent = totalPointsRespondent;
+      renderSliders();
+    }
+
+    function renderSliders() {
+      const container = document.getElementById("slidersContainer");
+      container.innerHTML = "";
+
+      respondentCategories.forEach((cat, index) => {
+        const row = document.createElement("div");
+        row.className = "slider-row";
+
+        const header = document.createElement("div");
+        header.className = "slider-header";
+
+        const left = document.createElement("div");
+        left.textContent = cat.name;
+
+        const right = document.createElement("div");
+        right.textContent = `Valor: ${cat.value} · Peso: ${cat.weight}`;
+
+        header.appendChild(left);
+        header.appendChild(right);
+
+        const range = document.createElement("input");
+        range.type = "range";
+        range.min = "0";
+        range.max = String(totalPointsRespondent);
+        range.value = cat.value;
+        range.addEventListener("input", (e) => {
+          const v = parseInt(e.target.value, 10) || 0;
+          setRespondentValue(index, v);
+        });
+
+        row.appendChild(header);
+        row.appendChild(range);
+        container.appendChild(row);
+      });
+
+      updateTotalsAndChart();
+    }
+
+    function setRespondentValue(index, newValue) {
+      if (isNaN(newValue) || newValue < 0) newValue = 0;
+
+      const othersSum = respondentCategories.reduce((sum, c, i) => {
+        return i === index ? sum : sum + (c.value || 0);
+      }, 0);
+
+      const maxForThis = Math.max(0, totalPointsRespondent - othersSum);
+      if (newValue > maxForThis) newValue = maxForThis;
+
+      respondentCategories[index].value = newValue;
+      renderSliders();
+    }
+
+    function updateTotalsAndChart() {
+      const used = respondentCategories.reduce((s, c) => s + (c.value || 0), 0);
+      const remaining = totalPointsRespondent - used;
+
+      document.getElementById("totalUsed").textContent = used;
+      document.getElementById("totalRemaining").textContent = remaining;
+
+      updateChart();
+    }
+
+    function updateChart() {
+      const ctx = document.getElementById("radarChart");
+      if (!ctx) return;
+
+      const labels = respondentCategories.map((c) => c.name);
+      const rawValues = respondentCategories.map((c) => c.value);
+      const weightedValues = respondentCategories.map((c) => c.value * c.weight);
+
+      const data = {
+        labels,
+        datasets: [
+          {
+            label: "Valor bruto",
+            data: rawValues,
+            fill: true,
+            pointRadius: 3,
+            pointHoverRadius: 5
+          },
+          {
+            label: "Valor ponderado (valor × peso)",
+            data: weightedValues,
+            fill: true,
+            pointRadius: 3,
+            pointHoverRadius: 5
+          }
+        ]
+      };
+
+      const options = {
+        responsive: true,
+        scales: {
+          r: {
+            beginAtZero: true,
+            ticks: { stepSize: 1 }
+          }
+        },
+        plugins: {
+          legend: { position: "top" }
+        }
+      };
+
+      if (radarChart) {
+        radarChart.data = data;
+        radarChart.options = options;
+        radarChart.update();
+      } else {
+        radarChart = new Chart(ctx, {
+          type: "radar",
+          data,
+          options
+        });
+      }
+    }
+
+    function showError() {
+      document.getElementById("errorView").style.display = "block";
+    }
+
+    // ---------- ARRANQUE ----------
+    document.addEventListener("DOMContentLoaded", () => {
+      const params = new URLSearchParams(window.location.search);
+      const configParam = params.get("config");
+
+      if (configParam) {
+        // MODO RESPONDENTE
+        initRespondentMode(configParam);
+      } else {
+        // MODO EDITOR
+        initEditorMode();
+      }
+    });
+  </script>
 </body>
 </html>
